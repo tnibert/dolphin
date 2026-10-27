@@ -130,6 +130,19 @@ static void EnableSDLLogging()
       nullptr);
 }
 
+bool IsGCAdapterConfigured()
+{
+  for (int i = 0; i != SerialInterface::MAX_SI_CHANNELS; ++i)
+  {
+    if (Config::Get(Config::GetInfoForSIDevice(i)) == SerialInterface::SIDEVICE_WIIU_ADAPTER)
+    {
+      return true;
+      break;
+    }
+  }
+  return false;
+}
+
 InputBackend::InputBackend(ControllerInterface* controller_interface)
     : ciface::InputBackend(controller_interface)
 {
@@ -162,19 +175,11 @@ InputBackend::InputBackend(ControllerInterface* controller_interface)
     Config::SetBase(Config::MAIN_SDL_HINT_JOYSTICK_HIDAPI_VERTICAL_JOY_CONS, "0");
 
   // Disable SDL's GC Adapter handling when we want to handle it ourselves.
-  bool is_gc_adapter_configured = false;
-  for (int i = 0; i != SerialInterface::MAX_SI_CHANNELS; ++i)
-  {
-    if (Config::Get(Config::GetInfoForSIDevice(i)) == SerialInterface::SIDEVICE_WIIU_ADAPTER)
-    {
-      is_gc_adapter_configured = true;
-      break;
-    }
-  }
+  // This prevents "Resource busy" error for GameCube Controller Adapter (USB) users.
   // TODO: This hint should be adjusted when the config changes,
   //  but SDL requires it be set before joystick initialization,
   //  and ControllerInterface isn't prepared for SDL to spontaneously re-initialize itself.
-  SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_GAMECUBE, is_gc_adapter_configured ? "0" : "1");
+  SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_GAMECUBE, IsGCAdapterConfigured() ? "0" : "1");
 
   // Load all the hints from the config file
   std::shared_ptr<Config::Layer> layer = Config::GetLayer(Config::LayerType::Base);
